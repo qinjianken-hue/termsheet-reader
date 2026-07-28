@@ -1,0 +1,55 @@
+{
+  "_comment": "Worked example: the four notes this skill was validated against on 2026-06-03 (Vontobel, BBVA, DBS, Nomura). Run: python ../scripts/gen_fcn_csv.py example_input.json --outdir <dir>",
+  "fcns": [
+    {
+      "trade_date": "2026-05-29", "issue_date": "2026-06-12",
+      "obs_dates": ["2026-07-13","2026-08-12","2026-09-14","2026-10-12","2026-11-12","2026-12-14","2027-01-12","2027-02-12","2027-03-12","2027-04-12","2027-05-12","2027-06-14"],
+      "maturity_date": "2027-06-16", "ko_type": "Daily Close", "ki_type": "", "memory": "No",
+      "tenor_mo": 12, "principal": 50000, "coupon_pa": "0.12",
+      "ko_level": "1", "strike_level": "0.5", "ki_level": "", "currency": "USD",
+      "underlyings": [
+        {"stock": "AMAT", "trade_price": "450.06"},
+        {"stock": "IBM",  "trade_price": "297.80"},
+        {"stock": "NVDA", "trade_price": "211.14"},
+        {"stock": "TSM",  "trade_price": "418.45"}
+      ]
+    },
+    {
+      "trade_date": "2026-05-29", "issue_date": "2026-06-12",
+      "obs_dates": ["2026-07-13","2026-08-12","2026-09-14","2026-10-12","2026-11-12","2026-12-14"],
+      "maturity_date": "2026-12-16", "ko_type": "Daily Close", "ki_type": "EKI", "memory": "Yes",
+      "tenor_mo": 6, "principal": 430000, "coupon_pa": "0.30",
+      "ko_level": "1.05", "strike_level": "0.623", "ki_level": "0.55", "currency": "USD",
+      "underlyings": [
+        {"stock": "CRWV", "trade_price": "109.53"},
+        {"stock": "NVDA", "trade_price": "211.14"},
+        {"stock": "PLTR", "trade_price": "156.54"},
+        {"stock": "QCOM", "trade_price": "251.02"}
+      ]
+    },
+    {
+      "trade_date": "2026-05-28", "issue_date": "2026-06-04",
+      "obs_dates": ["2026-07-06","2026-08-04","2026-09-04","2026-10-05","2026-11-04","2026-12-04","2027-01-04"],
+      "maturity_date": "2027-01-06", "ko_type": "Daily Close", "ki_type": "EKI", "memory": "Yes",
+      "tenor_mo": 7, "principal": 135000, "coupon_pa": "0.3657",
+      "ko_level": "1.08", "strike_level": "0.65", "ki_level": "0.55", "currency": "SGD",
+      "underlyings": [
+        {"stock": "NBIS", "trade_price": "226.34"},
+        {"stock": "STX",  "trade_price": "880.72"},
+        {"stock": "WDC",  "trade_price": "531.18"}
+      ]
+    },
+    {
+      "trade_date": "2026-05-28", "issue_date": "2026-06-04",
+      "obs_dates": ["2026-07-06","2026-08-04","2026-09-04","2026-10-05","2026-11-04","2026-12-04","2027-01-04"],
+      "maturity_date": "2027-01-06", "ko_type": "Daily Close", "ki_type": "EKI", "memory": "Yes",
+      "tenor_mo": 7, "principal": 135000, "coupon_pa": "0.349",
+      "ko_level": "1.08", "strike_level": "0.65", "ki_level": "0.55", "currency": "SGD",
+      "underlyings": [
+        {"stock": "AMD",  "trade_price": "518.09"},
+        {"stock": "MU",   "trade_price": "923.52"},
+        {"stock": "SNDK", "trade_price": "1641.64"}
+      ]
+    }
+  ]
+}
