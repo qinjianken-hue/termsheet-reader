@@ -1,0 +1,22 @@
+{
+  "_comment": "Worked example: the validated CRWD leveraged accumulator (GS/UOBKH, SDB1453800981). Run: python ../scripts/gen_aqdq_csv.py example_input.json --outdir <dir>",
+  "trades": [
+    {
+      "aq_dq": "AQ",
+      "trade_date": "2026-05-19",
+      "initial_obs_date": "2026-05-20",
+      "gtd_period_end": "2026-06-16",
+      "gtd_days": 19,
+      "final_obs_date": "2027-05-18",
+      "total_expiries": 250,
+      "notional": "155706.67",
+      "currency": "USD",
+      "leverage": 2,
+      "shares_per_day": 1,
+      "stock": "CRWD",
+      "trade_price": "622.8267",
+      "ko_level": "1.07",
+      "strike_level": "0.747"
+    }
+  ]
+}
