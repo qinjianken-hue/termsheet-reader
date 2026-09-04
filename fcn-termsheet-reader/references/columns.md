@@ -56,9 +56,39 @@ where it differs.
 | Strike Price | AC | AO | = X × Strike Level |
 | KI Price | AD | AP | = X × KI Level / blank |
 
-Everything after KI Price — Database Last Close, Underlying KO/KI/Strike Status, Note Status,
-DTKO, DTKI, Stock Performance, No./Total Obs, Coupon Received, M2M, Remark, ISIN — is computed by
-the sheet from live market data. **Do not fill these.**
+The 12 columns after KI Price — Database Last Close, Underlying KO/KI/Strike Status, Note Status,
+DTKO, DTKI, Stock Performance, No. of Obs, Total Obs, Coupon Received, M2M — are computed by the
+sheet from live market data. **Do not fill these.**
+
+## Investor (AQ / BC) — filled by hand, from the booking email
+The column right after the computed block holds the **investor**: `AQ` in the 12-obs layout,
+`BC` in the 24-obs layout. Format is **`<TR code> <client name>`** — e.g. `EM4 Xu Chaoping`,
+`EM4 Xie Jiansheng` — and it goes on the **first underlying row of each note only**, not on every
+basket line.
+
+It is never in the termsheet; it comes from the **booking email**, which states it twice:
+- the booking table's **TR Code** + **Client Name** columns (e.g. `EM4` / `Xu Chaoping`), and
+- the forwarder's own covering line, e.g. Jerry's *"trade booking for your record. **For EM4 Xu
+  Chaoping**. Thank you."*
+
+Use the booking table's spelling; strip the account number (the tracker keeps only code + name).
+Pass it as the note-level `"investor"` field. Because the term is email-sourced by definition it is
+coloured **green** and gets its own Audit row; if the email really doesn't name a client, leave the
+field out and it records as amber "not stated in the booking email".
+
+`gen_fcn_xlsx.py` writes Investor on its **real tracker letter** — the 12 sheet-computed columns
+(AE–AP) are emitted as **empty grey-headed spacer columns** so the value physically lands in AQ.
+Those spacers are blank on purpose: they are the tracker's own formulas, so **don't paste AE–AP
+over a live tracker** — paste A–AD, then AQ.
+
+### Shaun Lee Wei Qing only: multi-client AQ + ISIN in AR
+Shaun (TR 805) books one ISIN across several clients and records it as **one note block**. Then:
+- **AQ** = `<TR code> <CLIENT> (<notional>), <CLIENT> (<notional>), …` — TR code once at the
+  front, a bracketed notional per client. One client ⇒ plain `<TR code> <CLIENT>`, no bracket.
+- **AR** = the note's **ISIN** (`BD` in the 24-obs layout). Emitted only with `--tracker-isin`.
+- `Principal (T)` is the **combined** notional across those clients.
+
+No other sender uses this — for everyone else AR is untouched and one block = one client.
 
 A note's terms split into **note-level** fields (A–U / the block up to Coupon) that repeat on every
 underlying's row, and **per-underlying** fields (Stock onward) that differ per row.

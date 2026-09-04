@@ -29,6 +29,11 @@ Colour key (Tracker + Audit "Match"):
 Driven by optional JSON fields:
   note-level:
      "isin", "issuer"            -> labels for the Audit sheet (never written into Tracker)
+     "investor": "EM4 Xu Chaoping"
+         -> the tracker's Investor column (AQ in the 12-obs layout, BC in the 24-obs), read off
+            the booking table's TR Code + Client Name. Written on the FIRST underlying row of the
+            note only. AE-AP are emitted as empty grey spacer columns so Investor lands on its
+            real letter; those spacers are the sheet's own formulas, so paste A-AD and AQ only.
      "verification": {           -> ONLY email-corroborated terms go here; field -> {ref, source}
          "ko_type":     {"ref": "Daily",   "source": "dealer order email"},
          "strike_level":{"ref": "46.04%",  "source": "email subject"},
@@ -71,6 +76,8 @@ GREEN = PatternFill("solid", fgColor="C6EFCE")
 AMBER = PatternFill("solid", fgColor="FFEB9C")
 RED   = PatternFill("solid", fgColor="FFC7CE")
 HDR   = PatternFill("solid", fgColor="1F4E78")
+INVHDR = PatternFill("solid", fgColor="7F6000")   # Investor header (col AQ / BC)
+SPACERHDR = PatternFill("solid", fgColor="A6A6A6")  # the sheet-computed columns, emitted blank
 NOTEBAR = PatternFill("solid", fgColor="DDEBF7")
 GREEN_FONT = Font(color="006100")
 AMBER_FONT = Font(color="9C6500")
@@ -171,18 +178,52 @@ def header_row(n_obs):
     return ["Trade date", "Issue date"] + obs + FIELDS_AFTER_OBS
 
 
+# Between the data block and Investor the tracker has 12 columns the SHEET computes itself.
+# They are emitted as EMPTY spacer columns purely so Investor lands on its real tracker
+# letter (AQ in the 12-obs layout, BC in the 24-obs) - the user asked for that alignment.
+# They are left blank on purpose: paste them over a live tracker and you wipe its formulas.
+SHEET_COMPUTED_HEADERS = ["Database Last Close (LC)", "Underlying KO Status",
+    "Underlying KI Status", "Underlying Strike Status", "Note Status", "DTKO", "DTKI",
+    "Stock Performance", "No. of Obs", "Total Obs", "Coupon Received", "M2M"]
+SHEET_COMPUTED_COLS = len(SHEET_COMPUTED_HEADERS)
+
+
+def investor_col_letter(n_data_cols):
+    """Tracker letter the Investor value belongs in: 12-obs -> AQ, 24-obs -> BC."""
+    return openpyxl.utils.get_column_letter(n_data_cols + SHEET_COMPUTED_COLS + 1)
+
+
+def isin_col_letter(n_data_cols):
+    """Tracker letter for the optional ISIN column, one right of Investor:
+    12-obs -> AR, 24-obs -> BD. Only emitted with --tracker-isin (Shaun's layout)."""
+    return openpyxl.utils.get_column_letter(n_data_cols + SHEET_COMPUTED_COLS + 2)
+
+
 # ---- Tracker sheet ---------------------------------------------------------
 
-def build_tracker(wb, fcns, n_obs):
+def build_tracker(wb, fcns, n_obs, tracker_isin=False):
     ws = wb.active
     ws.title = "Tracker"
     hdr = header_row(n_obs)
-    ws.append(hdr)
+    inv_letter = investor_col_letter(len(hdr))
+    isin_letter = isin_col_letter(len(hdr))
+    ws.append(hdr + [f"({h}) - sheet-computed, left blank" for h in SHEET_COMPUTED_HEADERS]
+                  + [f"Investor (col {inv_letter})"]
+                  + ([f"ISIN (col {isin_letter})"] if tracker_isin else []))
     for c in ws[1]:
         c.fill = HDR; c.font = HDR_FONT
         c.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
     ws.freeze_panes = "A2"
     col = {name: hdr.index(name) + 1 for name in hdr}
+    # empty spacer columns so Investor sits on its real tracker letter
+    for i in range(len(hdr) + 1, len(hdr) + 1 + SHEET_COMPUTED_COLS):
+        ws.cell(row=1, column=i).fill = SPACERHDR
+        ws.column_dimensions[openpyxl.utils.get_column_letter(i)].width = 11
+    inv_col = len(hdr) + SHEET_COMPUTED_COLS + 1
+    ws.cell(row=1, column=inv_col).fill = INVHDR
+    isin_col = inv_col + 1
+    if tracker_isin:
+        ws.cell(row=1, column=isin_col).fill = INVHDR
 
     r = 2
     for f in fcns:
@@ -205,7 +246,8 @@ def build_tracker(wb, fcns, n_obs):
             else:
                 status_by_col[cn] = field_status(extracted_by_col[cn], ver.get(VER_KEY[cn]))[0]
 
-        for u in f["underlyings"]:
+        investor = (f.get("investor") or "").strip()
+        for u_idx, u in enumerate(f["underlyings"]):
             X = dec(u["trade_price"])
             AB = X * ko if (X is not None and ko is not None) else None
             AC = X * st if (X is not None and st is not None) else None
@@ -222,13 +264,32 @@ def build_tracker(wb, fcns, n_obs):
                     continue
                 cell = ws.cell(row=r, column=col[cn])
                 cell.fill = FILL[s]; cell.font = FONT[s]
+            # Investor sits on the FIRST underlying row of the note only - that is how the
+            # tracker records it (one entry per note, not per basket line)
+            if investor and u_idx == 0:
+                ic = ws.cell(row=r, column=inv_col, value=investor)
+                ic.fill = FILL[OK]; ic.font = FONT[OK]
+            # ISIN sits one column right of Investor, same first-row-only rule. Like
+            # Investor it is booking-email sourced, so it paints green.
+            if tracker_isin and u_idx == 0 and f.get("isin"):
+                sc = ws.cell(row=r, column=isin_col, value=f["isin"])
+                sc.fill = FILL[OK]; sc.font = FONT[OK]
             r += 1
         r += 1  # blank separator between notes
 
     for i, name in enumerate(hdr, start=1):
         letter = openpyxl.utils.get_column_letter(i)
         ws.column_dimensions[letter].width = 13 if name.startswith(("Trade", "Issue", "Obs", "Maturity")) else 11
+    # multi-client Investor strings ("NAME (200,000), NAME (200,000)") need real width
+    inv_width = max([26] + [len(f.get("investor") or "") for f in fcns])
+    ws.column_dimensions[openpyxl.utils.get_column_letter(inv_col)].width = min(inv_width, 90)
+    if tracker_isin:
+        ws.column_dimensions[openpyxl.utils.get_column_letter(isin_col)].width = 16
     _legend(ws, r + 1, 1)
+    ws.cell(row=r + 1, column=inv_col,
+            value=f"Investor sits on its real tracker letter ({inv_letter}). The "
+                  f"{SHEET_COMPUTED_COLS} grey columns before it are the sheet's own formulas "
+                  f"and are emitted BLANK - don't paste them over a live tracker.").font = BOLD
     return ws
 
 
@@ -298,6 +359,16 @@ def build_audit(wb, fcns):
             status, ref, source = field_status(vals[label], ver.get(key))
             add(label, "", vals[label], ref, status, source)
 
+        # Investor never appears in the termsheet - it comes from the booking email only,
+        # so it is green by construction (or amber-blank when the email didn't name a client)
+        investor = (f.get("investor") or "").strip()
+        if investor:
+            src = (ver.get("investor", {}) or {}).get(
+                "source", "booking table (TR Code + Client Name)")
+            add("Investor", "", investor, investor, OK, src)
+        else:
+            add("Investor", "", "", None, EXTRACTED, "not stated in the booking email")
+
         for rr in range(block_start, r):
             ws.cell(row=rr, column=1).fill = NOTEBAR
         r += 1  # blank row between notes
@@ -329,6 +400,10 @@ def main():
     ap.add_argument("--sender", default="",
                     help="dealer/sender name to tag into the output filename so batches "
                          "from different senders stay distinguishable")
+    ap.add_argument("--tracker-isin", action="store_true",
+                    help="also write each note's ISIN one column right of Investor "
+                         "(AR in the 12-obs layout, BD in the 24-obs). Shaun Lee Wei Qing's "
+                         "layout only - see SKILL.md 'Shaun Lee Wei Qing: one block per note'")
     args = ap.parse_args()
 
     with open(args.data, encoding="utf-8-sig") as fh:
@@ -337,7 +412,7 @@ def main():
     n_obs = 24 if any(int(f["tenor_mo"]) > 12 for f in fcns) else 12
 
     wb = openpyxl.Workbook()
-    build_tracker(wb, fcns, n_obs)
+    build_tracker(wb, fcns, n_obs, tracker_isin=args.tracker_isin)
     build_audit(wb, fcns)
 
     now = datetime.now()
@@ -345,6 +420,8 @@ def main():
     tag = f" - {sender}" if sender else ""
     path = os.path.join(args.outdir,
                         "FCN Termsheet Reader{} {:%Y-%m-%d %H%M%S}.xlsx".format(tag, now))
+    # per-sender folders (see SKILL.md "Naming & folders") usually don't exist yet
+    os.makedirs(args.outdir, exist_ok=True)
     wb.save(path)
 
     n_rows = sum(len(f["underlyings"]) for f in fcns)

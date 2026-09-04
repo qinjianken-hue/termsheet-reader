@@ -58,6 +58,12 @@ N(1)+N(2) = 9+10 = **19**. A naive weekday count gives 20 here because it misses
 holiday — the schedule's N column is the source of truth. If there is no per-period table, count
 trading days from the Effective Date to the guaranteed-period end and say it's approximate.
 
+**No guarantee at all (order table "Guarantee Period: 0W"):** some termsheets — e.g. the Barclays
+leveraged decumulators — carry no Minimum Share Accrual / guaranteed-period clause; the knock-out
+is live from the Trade Date. Then **GTD Days = 0** and **GTD Period End is left BLANK** (user's
+convention, confirmed 2026-08-05) — do not substitute the trade or effective date. Pass
+`"gtd_period_end": ""` in the JSON; the generator writes an empty cell.
+
 ## AQ / DQ classification
 - **AQ (Accumulator)** — client *buys/accumulates* shares daily, "Buy Below Market": strike /
   forward **below** spot (<100%), knock-out **above** spot (>100%).

@@ -109,6 +109,26 @@ it**, so a batch stays sortable.
   - A sender with several notes goes into **one** workbook (multiple Tracker rows), not one file
     per note.
 
+## Shaun Lee Wei Qing: one block per note + ISIN in AR (this sender only)
+**Applies only when the booking email is from Shaun Lee Wei Qing (TR 805)** — not to Zhang Wei,
+Wang Linjing, Jerry, Rajiv or anyone else. Shaun routinely books **one ISIN across several
+clients**, so his booking table has several rows for the same note, each with its own client and
+Qty. His tracker records that **as a single note block**, not one block per client:
+
+- **One note object per ISIN** (not per client). `principal` = the **combined** notional of all
+  the booking rows — cross-check it against the dealer's stated total (GS "Issue Size", OCBC
+  "Notional:", the place-order "Notional: SGD250K"), which is a genuine second source.
+- **`investor` (AQ)** — `<TR code> <CLIENT> (<notional>), <CLIENT> (<notional>), …`, e.g.
+  `805 HUANG BINGJIANG (200,000), HENDRICKS ALOYSIUS GREGORY (200,000), ANNE WONSONO (200,000)`.
+  The TR code is written **once**, at the front. A **single-client** note keeps the plain
+  `<TR code> <CLIENT>` form with **no** bracket — brackets exist only to split a shared note.
+- **ISIN (AR)** — pass `--tracker-isin` so the note's `isin` is written one column right of
+  Investor (**AR** in the 12-obs layout, **BD** in the 24-obs). Both cells go on the **first
+  underlying row** of the note and paint green (booking-email sourced).
+
+Everyone else: no `--tracker-isin`, and if a note somehow spans clients, fall back to one block
+per client. Do not widen this rule to other senders.
+
 ## JSON input schema for gen_fcn_xlsx.py
 One object per note in `fcns`. Note-level fields apply to every underlying; `underlyings` carries
 the per-stock values. Pass prices/levels/coupon as **strings** to preserve exact decimals. The
@@ -121,6 +141,7 @@ green/amber/red colouring — supply `verification` for every term the dealer em
     {
       "isin": "XS0000000000",
       "issuer": "UBS",
+      "investor": "EM4 Xu Chaoping",
       "trade_date": "2026-05-29",
       "issue_date": "2026-06-12",
       "obs_dates": ["2026-07-13", "...chronological...", "2026-06-14"],
@@ -170,6 +191,13 @@ green/amber/red colouring — supply `verification` for every term the dealer em
   the whole file uses the 24-obs layout.
 - `isin` / `issuer`: label the Audit sheet only — **never** written into the Tracker rows (the
   tracker's ISIN column is computed by the user's sheet).
+- `investor`: **always fill this** — the tracker's Investor column (`AQ` in the 12-obs layout,
+  `BC` in the 24-obs). Format `<TR code> <client name>`, e.g. `"EM4 Xu Chaoping"`. Read it off the
+  **booking table's TR Code + Client Name** columns (the forwarder's covering line — Jerry's
+  *"For EM4 Xu Chaoping"* — says the same thing); drop the account number. It is written on the
+  **first underlying row of each note only** and lands on its **real tracker letter** — the script
+  emits AE–AP as empty grey spacer columns so the value sits in AQ. Those spacers are the sheet's
+  own formulas, so paste A–AD and AQ, not AE–AP. Omit the field only if the email names no client.
 - A worked `references/example_input.json` reproduces the four notes this skill was validated on
   (base schema; the verification fields are optional add-ons on top).
 
@@ -188,7 +216,8 @@ green/amber/red colouring — supply `verification` for every term the dealer em
   and a bare date would get re-displayed by Excel in d/m/yyyy locale form and then flipped to m/d by
   Sheets. The formula-text survives the round trip unchanged. Don't "simplify" this away.
 - Status / last-close / ISIN columns are computed by the sheet — don't fill them (ISIN goes in the
-  Audit sheet's label column instead, via the note's `isin` field).
+  Audit sheet's label column instead, via the note's `isin` field). The one hand-filled column past
+  that block is **Investor** — see the `investor` field above.
 
 ## Environment notes
 - `pypdf`, `extract_msg`, and `openpyxl` are installed; use them (don't rely on the Read tool for

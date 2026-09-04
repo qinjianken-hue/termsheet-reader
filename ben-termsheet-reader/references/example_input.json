@@ -1,0 +1,105 @@
+{
+  "sender": "Rajiv Sharma",
+  "notes": [
+    {
+      "isin": "XS3454350854",
+      "issuer": "Goldman Sachs Bank Europe SE",
+      "product": "Regular BEN",
+      "trade_date": "20-Aug-2026",
+      "issue_date": "03-Sep-2026",
+      "final_val_date": "03-Mar-2027",
+      "maturity_date": "10-Mar-2027",
+      "tenor": 6,
+      "currency": "USD",
+      "notional": 100000,
+      "coupon_flat": 35.87,
+      "put_strike": 95.0,
+      "coupon_barrier": 95.0,
+      "upside_participation": 100,
+      "underlyings": [
+        {
+          "ticker": "AMD UW",
+          "short": "AMD",
+          "name": "Advanced Micro Devices Inc",
+          "spot": 466.3742
+        },
+        {
+          "ticker": "NVDA UW",
+          "short": "NVDA",
+          "name": "NVIDIA Corp",
+          "spot": 217.2941
+        }
+      ],
+      "verification": {
+        "Trade Date": {
+          "ref": "Strike Date 20-Aug-26",
+          "source": "Place Order email table + subject 'trade done on 20-Aug-2026'"
+        },
+        "Issue Date": {
+          "ref": "Issue Date 03-Sept-26",
+          "source": "Place Order email table"
+        },
+        "Tenor (mo)": {
+          "ref": "Tenor 6M",
+          "source": "Place Order email table"
+        },
+        "Final Valuation Date": {
+          "ref": "Final Valuation Date 03-Mar-27",
+          "source": "Place Order email table"
+        },
+        "Underlying": {
+          "ref": "AMD.OQ, NVDA.OQ / AMD UQ, NVDA UQ",
+          "source": "Place Order email table + subject 'BEN on AMD + NVDA'"
+        },
+        "Currency": {
+          "ref": "CCY USD",
+          "source": "Place Order email table"
+        },
+        "Notional": {
+          "ref": "Notional Amount : USD 100,000",
+          "source": "Place Order email body + table Min/Max USD 100K / USD 5M"
+        },
+        "Coupon Flat": {
+          "ref": "Coupon Flat % 35.87",
+          "source": "Place Order email table"
+        },
+        "Put Strike = Coupon Barrier": {
+          "ref": "Put Strike % 95.00 = Coupon Barrier % 95.00",
+          "source": "Place Order email table"
+        },
+        "ISIN": {
+          "ref": "filename 20260821_XS3454350854_BEN_2.00.pdf",
+          "source": "Termsheet PRODUCT block, corroborated by the attachment filename"
+        },
+        "Issuer": {
+          "ref": "Issuer GS",
+          "source": "Place Order email table"
+        },
+        "Maturity Date": {
+          "ref": "Maturity Date 10-Mar-27",
+          "source": "Place Order email table"
+        },
+        "Upside Participation": {
+          "ref": "Upside Participation % 100.00",
+          "source": "Place Order email table"
+        },
+        "Spot reference basis": {
+          "ref": "Spot reference : Volume Weighted Average Price (VWAP)",
+          "source": "Place Order email body - explains the 4-dp non-close initial levels"
+        }
+      },
+      "amber_reason": {
+        "Spot Price": "Reference Price (Initial) in the termsheet basket table; the email only says 'Spot reference : VWAP' with no levels.",
+        "Strike Price": "Termsheet basket table (= Spot x Put Strike %); the arithmetic reconciles but that is NOT a cross-check."
+      },
+      "extra_audit": {
+        "ISIN": "XS3454350854",
+        "Issuer": "Goldman Sachs Bank Europe SE",
+        "Maturity Date": "10-Mar-2027",
+        "Upside Participation": "100% (redemption = Max(Worst Underlying Performance, 135.87%), so no cap above the flat coupon)",
+        "Strike Price": "AMD 443.0555 / NVDA 206.4294",
+        "Spot reference basis": "VWAP"
+      }
+    }
+  ]
+}

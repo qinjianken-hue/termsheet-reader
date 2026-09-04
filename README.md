@@ -1,12 +1,23 @@
 # Termsheet Reader
 
-Two [Claude Code](https://claude.com/claude-code) skills that turn structured-product
+Three [Claude Code](https://claude.com/claude-code) skills that turn structured-product
 termsheets into paste-ready tracker rows, each with a colour-coded verification audit trail.
 
 | Skill | Reads | Produces |
 |---|---|---|
 | [`fcn-termsheet-reader`](fcn-termsheet-reader/) | FCN / autocallable worst-of equity-linked notes | Excel workbook — **Tracker** (one row per underlying, blank row between notes, columns A–AD or A–AP) + **Audit** |
 | [`aqdq-termsheet-reader`](aqdq-termsheet-reader/) | Accumulator / Decumulator ("AQ/DQ") leveraged knock-out forwards | Excel workbook — **Tracker** (one row per trade, columns A–O) + **Audit** |
+| [`ben-termsheet-reader`](ben-termsheet-reader/) | BEN / Bonus Enhanced Notes — European worst-of bonus notes | Excel workbook — **Tracker** (one row per underlying, 10 columns, plus an optional per-recipient 14-column block) + **Audit** |
+
+### Telling them apart
+
+All three are worst-of equity-linked, and the termsheets look similar at a glance:
+
+- **FCN** — periodic coupon, observation dates, an autocall/KO level, a knock-in.
+- **BEN** — European. No autocall, no KO, no continuous KI. Redemption is
+  `Max(Worst Underlying Performance, 1XX%)`, with physical delivery below a put strike.
+  The coupon is a **flat maturity payout, not p.a.**, and the upside is uncapped.
+- **AQDQ** — not a note at all: a leveraged knock-out forward accumulating shares daily.
 
 ## The audit trail is the point
 
@@ -21,7 +32,7 @@ dealer's booking / place-order email table, the email subject line, or the filen
 Internal arithmetic is deliberately **not** treated as a cross-check. Computed
 `KO Price = Trade Price × KO Level` always reconciles against the termsheet's own printed
 basket price, so it proves nothing about whether the term was *read* correctly. The same
-applies to the AQDQ notional reconciliation
+applies to BEN's `Strike Price = Spot × Put Strike %`, and to the AQDQ notional reconciliation
 (`Notional ≈ Total Expiries × Shares/Day × Trade Price`) — it runs as a self-check and prints
 a warning on mismatch, but never colours a cell green.
 
@@ -43,13 +54,22 @@ aqdq-termsheet-reader/
   references/example_input.json
   scripts/gen_aqdq_xlsx.py
   scripts/gen_aqdq_csv.py      # deprecated
+  scripts/find_place_order.py  # locate the matching dealer order email
+  scripts/extract_pdf.py
+  scripts/parse_msg.py
+
+ben-termsheet-reader/
+  SKILL.md
+  references/columns.md        # column dictionary & extraction rules
+  references/example_input.json
+  scripts/gen_ben_xlsx.py
   scripts/extract_pdf.py
   scripts/parse_msg.py
 ```
 
 ## Install
 
-Copy either directory into `~/.claude/skills/` (Windows: `C:\Users\<you>\.claude\skills\`).
+Copy any of the directories into `~/.claude/skills/` (Windows: `C:\Users\<you>\.claude\skills\`).
 Claude Code picks the skill up on the next session.
 
 ## Usage
@@ -58,12 +78,14 @@ The skills are model-invoked — hand over the termsheet PDFs (or the Outlook `.
 for the tracker rows. Under the hood each generator takes a JSON file:
 
 ```bash
-python scripts/gen_fcn_xlsx.py  data.json  --outdir <dir> --sender "<booking email sender>"
-python scripts/gen_aqdq_xlsx.py data.json  --outdir <dir> --sender "<booking email sender>"
+python scripts/gen_fcn_xlsx.py  data.json --outdir <dir> --sender "<booking email sender>"
+python scripts/gen_aqdq_xlsx.py data.json --outdir <dir> --sender "<booking email sender>"
+python scripts/gen_ben_xlsx.py  data.json --outdir <dir> --sender "<booking email sender>"
 ```
 
-Both write `<FCN|AQDQ> Termsheet Reader - <sender> <timestamp>.xlsx`. The JSON schema and the
-per-field extraction rules live in each skill's `SKILL.md` and `references/`.
+Each writes `<FCN|AQDQ|BEN> Termsheet Reader - <sender> <timestamp>.xlsx` into a per-sender
+folder. The JSON schema and the per-field extraction rules live in each skill's `SKILL.md`
+and `references/`.
 
 ## Requirements
 

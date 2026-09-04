@@ -60,6 +60,8 @@ earns a green cell.
 - **An Outlook `.msg`** bundling PDFs and possibly a summary table: `scripts/parse_msg.py`.
 - Any table the user provides (email body, tracker export) is a **validation reference** —
   extract from the document, then cross-check.
+- **From Rajiv Sharma?** The cross-check table lives in a *separate* email — fetch it with
+  `scripts/find_place_order.py` (see the Rajiv section below).
 
 ## Workflow
 1. **Collect documents.** For a `.msg`: `python scripts/parse_msg.py "<file.msg>" "<workdir>"`.
@@ -70,6 +72,9 @@ earns a green cell.
 3. **Read each trade into structured fields** per `references/rules.md` — the authoritative
    field dictionary and extraction rules (Share/Day vs Leverage split, Total Expiries and
    Guarantee Days from the schedule, AQ/DQ classification, label synonyms). **Read it first.**
+3b. **If the sender is Rajiv Sharma — go fetch the Place Order email** (see
+   *Rajiv Sharma: pull the Place Order email* below). Do this **before** writing the JSON;
+   it is what turns an almost-all-amber Rajiv workbook into a properly cross-checked one.
 4. **Write a JSON file** (schema below) and run `python scripts/gen_aqdq_xlsx.py <data.json>`
    (optionally `--outdir <dir>`; default = the user's Downloads, and `--sender "<name>"` — see
    *Naming & folders* below). It converts dates to
@@ -88,6 +93,56 @@ earns a green cell.
    confidence, confirm the notional reconciliation (Notional ≈ Total Expiries × Shares/Day ×
    Trade Price) — if it reconciles, the Shares/Day-vs-Leverage split and Total Expiries are
    almost certainly right (this is a self-check, not a green cross-check).
+
+## Rajiv Sharma: pull the Place Order email (this sender only)
+**Applies only when the booking email is from Rajiv Sharma (TR 601)** — not to Zhang Wei, Irvin,
+Jerry or anyone else, whose booking emails already carry the dealer table inline. Rajiv forwards
+the termsheet 1–2 business days *after* the trade with a bare "FYI" body, so on its own his
+workbook would come out almost entirely amber. The independent second document exists — it is
+just in a different email:
+
+> **Rajiv emails a `Place Order: Accu/Decu on <TICKER> - for the client - <acct> <NAME> - TR 601`
+> to the structured-products desk on the TRADE DATE**, containing a full order table. Occasionally
+> the order is sent by **Bhart Kishanchand Sheri** instead. The match often lands on a *reply*
+> (Credit's "Pls proceed") that quotes Rajiv's original table — that's fine, the table is intact.
+
+Run, once per trade, using the **trade date and underlying read off the termsheet** (not the
+forwarding email's date — the termsheet arrives later):
+
+```
+python scripts/find_place_order.py --underlying MSFT --trade-date 2026-07-31
+```
+
+It scans the Inbox and its subfolders over trade date −2 … +3 days for `Place Order` subjects
+naming that ticker with Rajiv/Bhart as sender or quoted author, and prints each hit's body.
+Widen with `--days-before` / `--days-after` if nothing comes back.
+
+**What the order table corroborates** (map these into `verification`):
+
+| Order-table field | Tracker field | `ref` to pass |
+|---|---|---|
+| Product (`DECU` / `ACCU`) | `aq_dq` | `"DECU"` |
+| CCY | `currency` | `"USD"` |
+| Tenor (`12M`) | `final_obs_date` | `"12M"` — say in `source` that 12M from the trade date gives the date |
+| # of days | `total_expiries` | `"250"` |
+| Underlying (Reuters) | `stock` | `"MSFT.OQ"` |
+| Strike % | `strike_level` | `"120.75%"` — **keep the `%`** |
+| KO % | `ko_level` | `"95.00%"` — **keep the `%`** |
+| Guarantee Period (`4W`) | `gtd_days` | `"4W"` — note in `source` that 4×5 = 20 trading days. **`0W` ⇒ `gtd_days` 0 and `gtd_period_end` `""` (blank cell)** — see rules.md |
+| Leverage Factor | `leverage` | `"2"` |
+| body "N share per day…" | `shares_per_day` | `"1"` |
+| email sent date / subject | `trade_date` | `"31-Jul-2026"` |
+
+**Stays amber even with the order in hand** — the order says `Spot reference : VWAP`, so
+`trade_price` is termsheet-only; `Min/Max Notional` is a range, so `notional` is termsheet-only;
+and the order never states `initial_obs_date` or `gtd_period_end`.
+
+**Watch for:** Rajiv's body often reads "1 share per day **wo leverage**" while the table shows
+`Leverage Factor 2` — not a contradiction. The prose gives the **base** quantity
+(`shares_per_day` = 1) and the table gives the multiplier (`leverage` = 2); that is exactly the
+termsheet's "1 Share if …, or 2 Shares if …". Don't flip them.
+
+If no Place Order email turns up, say so and leave the terms amber — never invent a `ref`.
 
 ## Naming & folders (sender attribution)
 The user reads these booking emails out of Outlook and wants each output file to say **who sent

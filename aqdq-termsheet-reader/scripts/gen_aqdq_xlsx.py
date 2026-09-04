@@ -219,7 +219,10 @@ def build_tracker(wb, trades):
         for name in HEADERS:
             c = ws.cell(row=r, column=col[name])
             if name in DATE_COLS:
-                c.value = f'="{mdy(t[VER_KEY[name]])}"'
+                # a 0W-guarantee trade has no guaranteed period at all - leave the date blank
+                # rather than inventing one (GTD Days is then 0)
+                raw = t.get(VER_KEY[name], "")
+                c.value = f'="{mdy(raw)}"' if raw not in (None, "") else None
             else:
                 c.value = cell_value(t, name)
             status = field_status(t.get(VER_KEY[name], ""), ver.get(VER_KEY[name]))[0]
